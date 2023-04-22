@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /* construct raw payload structure */
     let payload_raw = Payload {
         nonce: timestamp.to_string(),
-        path: "/api/v2/members/me".to_string(),
+        path: "/api/v2/members/accounts".to_string(),
     };
     let params = format!("nonce={}", timestamp.to_string());
     println!("nonce:{}, path:{}", payload_raw.nonce, payload_raw.path);
@@ -86,21 +86,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     /* setup request content */
-    let request = format!("https://max-api.maicoin.com/api/v2/members/me?{}", params);
+    let request = format!(
+        "https://max-api.maicoin.com/api/v2/members/accounts?{}",
+        params
+    );
     println!("{}", request);
 
     /* create request sender with the pre-defined header */
     let client = reqwest::Client::builder().default_headers(header).build()?;
 
     /* send the request and wait for the respond */
-    let respond = client.get(request).send().await?;
-    println!("{}", respond.text().await?);
+    let respond = client
+        .get(request)
+        .send()
+        .await
+        .unwrap()
+        .json::<Vec<serde_json::Value>>()
+        .await
+        .unwrap();
+    //println!("result: {:?}", respond);
 
-    let respond = reqwest::get("https://max-api.maicoin.com/api/v2/timestamp")
-        .await?
-        .json::<i32>()
-        .await?;
-    println!("{:#?}", respond);
+    /* read accounts */
+    let vec = &respond;
+    for i in 0..vec.len() {
+        println!("{}:{}", vec[i]["currency"], vec[i]["balance"]);
+    }
+
+    //let respond = reqwest::get("https://max-api.maicoin.com/api/v2/timestamp")
+    //    .await?
+    //    .json::<i32>()
+    //    .await?;
+    //println!("{:#?}", respond);
 
     load_yaml(s);
 
