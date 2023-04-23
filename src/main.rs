@@ -66,14 +66,14 @@ mod ccgt {
             println!("{:#?}", respond);
         }
 
-        pub fn make_request(&mut self) {
+        pub fn build_auth_client(&mut self, api_path: &str) -> (reqwest::blocking::Client, String) {
             /* get milliseconds time of UNIX epoch time since 1970 */
             let timestamp = get_timestamp(SystemTime::now());
 
             /* construct raw payload structure */
             let payload_raw = Payload {
                 nonce: timestamp.to_string(),
-                path: "/api/v2/members/accounts".to_string(),
+                path: api_path.to_string(),
             };
             let params = format!("nonce={}", timestamp.to_string());
             println!("nonce:{}, path:{}", payload_raw.nonce, payload_raw.path);
@@ -109,10 +109,7 @@ mod ccgt {
             );
 
             /* setup request content */
-            let request = format!(
-                "https://max-api.maicoin.com/api/v2/members/accounts?{}",
-                params
-            );
+            let request = format!("https://max-api.maicoin.com/{}?{}", api_path, params);
             println!("{}", request);
 
             /* create request sender with the pre-defined header */
@@ -121,19 +118,24 @@ mod ccgt {
                 .build()
                 .unwrap();
 
+            (client, request)
+        }
+
+        pub fn sync_accounts_info(&mut self) {
+            /* build client embedded with authorization info */
+            let (client, request) = self.build_auth_client("/api/v2/members/accounts");
+
             /* send the request and wait for the respond */
-            let respond = client
+            let vec = client
                 .get(request)
                 .send()
                 .unwrap()
                 .json::<Vec<serde_json::Value>>()
                 .unwrap();
-            //println!("result: {:?}", respond);
-
-            self.accounts.clear();
+            //println!("result: {:?}", vec);
 
             /* read accounts */
-            let vec = &respond;
+            self.accounts.clear();
             for i in 0..vec.len() {
                 let account = Account {
                     currency: vec[i]["currency"].to_string(),
@@ -166,6 +168,6 @@ fn main() {
     ";
     trade_bot.load_yaml(s);
 
-    trade_bot.make_request();
+    trade_bot.sync_accounts_info();
     trade_bot.request_time();
 }
