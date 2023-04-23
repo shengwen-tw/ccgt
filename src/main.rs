@@ -95,6 +95,7 @@ mod ccgt {
 
             /* setup request content */
             let request = format!("https://max-api.maicoin.com/{}?{}", api_path, params);
+            println!("{}", request);
 
             /* create request sender with the pre-defined header */
             let client = reqwest::blocking::Client::builder()
@@ -103,6 +104,74 @@ mod ccgt {
                 .unwrap();
 
             (client, request)
+        }
+
+        pub fn get_orders(&mut self) {
+            let api_path = "/api/v2/orders";
+
+            /* get milliseconds time of UNIX epoch time since 1970 */
+            let timestamp = get_timestamp(SystemTime::now());
+
+            #[derive(Serialize)]
+            struct Payload {
+                nonce: String,
+                market: String,
+                state: String,
+                order_by: String,
+                group_id: i32,
+                pagination: bool,
+                page: i32,
+                limit: i32,
+                offset: i32,
+                path: String,
+            }
+
+            /* prepare payload data */
+            let payload_raw = Payload {
+                nonce: timestamp.to_string(),
+                market: "dogetwd".to_string(),
+                state: "%5Bwait%5D".to_string(),
+                order_by: "desc".to_string(),
+                group_id: 0,
+                pagination: false,
+                page: 1,
+                limit: 100,
+                offset: 0,
+                path: api_path.to_string(),
+            };
+
+            let params = format!(
+                "nonce={},market=\"{}\",state=%5B{}%5D,\
+                 order_by=\"{}\",group_id={},pagination={},\
+                 page={},limit={},offset={}",
+                payload_raw.nonce,
+                payload_raw.market,
+                payload_raw.state,
+                payload_raw.order_by,
+                payload_raw.group_id,
+                payload_raw.pagination,
+                payload_raw.page,
+                payload_raw.limit,
+                payload_raw.offset
+            );
+            println!("params: {}", params);
+
+            /* pack the payload with Base64 format */
+            let payload_json_b64 =
+                b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
+            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+
+            /* build client embedded with authorization info */
+            let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
+
+            /* send the request and wait for the respond */
+            let vec = client
+                .get(request)
+                .send()
+                .unwrap()
+                .json::<serde_json::Value>()
+                .unwrap();
+            println!("result: {:?}", vec);
         }
 
         pub fn sync_accounts_info(&mut self) {
@@ -176,5 +245,6 @@ fn main() {
     trade_bot.load_yaml(s);
 
     trade_bot.sync_accounts_info();
+    trade_bot.get_orders();
     trade_bot.read_server_time();
 }
