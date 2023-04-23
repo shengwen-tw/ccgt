@@ -17,9 +17,22 @@ mod ccgt {
         path: String,
     }
 
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Account {
+        currency: String,
+        balance: String,
+        locked: String,
+        stacked: String,
+        _type: String,
+        fiat_currency: String,
+        fiat_balance: String,
+    }
+
     pub struct GridTradeBot {
         access_key: String,
         secret_key: String,
+        accounts: Vec<Account>,
     }
 
     fn get_timestamp(time: SystemTime) -> u128 {
@@ -34,6 +47,7 @@ mod ccgt {
             GridTradeBot {
                 access_key: env::var("MAX_API_KEY").unwrap(),
                 secret_key: env::var("MAX_API_SECRET").unwrap(),
+                accounts: Vec::new(),
             }
         }
 
@@ -52,7 +66,7 @@ mod ccgt {
             println!("{:#?}", respond);
         }
 
-        pub fn make_request(&self) {
+        pub fn make_request(&mut self) {
             /* get milliseconds time of UNIX epoch time since 1970 */
             let timestamp = get_timestamp(SystemTime::now());
 
@@ -116,17 +130,30 @@ mod ccgt {
                 .unwrap();
             //println!("result: {:?}", respond);
 
+            self.accounts.clear();
+
             /* read accounts */
             let vec = &respond;
             for i in 0..vec.len() {
-                println!("{}:{}", vec[i]["currency"], vec[i]["balance"]);
+                let account = Account {
+                    currency: vec[i]["currency"].to_string(),
+                    balance: vec[i]["balance"].to_string(),
+                    locked: vec[i]["locked"].to_string(),
+                    stacked: vec[i]["stacked"].to_string(),
+                    _type: vec[i]["type"].to_string(),
+                    fiat_currency: vec[i]["fiat_currency"].to_string(),
+                    fiat_balance: vec[i]["balance"].to_string(),
+                };
+                self.accounts.push(account);
+
+                println!("{:?}", &self.accounts[i]);
             }
         }
     }
 }
 
 fn main() {
-    let trade_bot = ccgt::GridTradeBot::new();
+    let mut trade_bot = ccgt::GridTradeBot::new();
 
     let s = "
     symbol:        DOGETWD
