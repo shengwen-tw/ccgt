@@ -11,12 +11,6 @@ mod ccgt {
     use std::time::{SystemTime, UNIX_EPOCH};
     use yaml_rust::YamlLoader;
 
-    #[derive(Serialize)]
-    struct Payload {
-        nonce: String,
-        path: String,
-    }
-
     #[derive(Debug)]
     #[allow(dead_code)]
     struct Account {
@@ -24,7 +18,7 @@ mod ccgt {
         balance: String,
         locked: String,
         stacked: String,
-        _type: String,
+        r#type: String,
         fiat_currency: String,
         fiat_balance: String,
     }
@@ -58,36 +52,27 @@ mod ccgt {
             assert_eq!(doc["symbol"].as_str().unwrap(), "DOGETWD");
         }
 
-        pub fn request_time(&self) {
+        pub fn read_server_time(&self) -> i32 {
             let respond = reqwest::blocking::get("https://max-api.maicoin.com/api/v2/timestamp")
                 .unwrap()
                 .json::<i32>()
                 .unwrap();
-            println!("{:#?}", respond);
+            //println!("server time: {:#?}", respond);
+
+            respond
         }
 
-        pub fn build_auth_client(&mut self, api_path: &str) -> (reqwest::blocking::Client, String) {
-            /* get milliseconds time of UNIX epoch time since 1970 */
-            let timestamp = get_timestamp(SystemTime::now());
-
-            /* construct raw payload structure */
-            let payload_raw = Payload {
-                nonce: timestamp.to_string(),
-                path: api_path.to_string(),
-            };
-            let params = format!("nonce={}", timestamp.to_string());
-            println!("nonce:{}, path:{}", payload_raw.nonce, payload_raw.path);
-
-            /* pack the payload with Base64 format */
-            let payload = b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
-            println!("payload: {}", payload);
-
+        pub fn build_auth_client(
+            &mut self,
+            api_path: &str,
+            params: &String,
+            payload: &String,
+        ) -> (reqwest::blocking::Client, String) {
             /* generate the signature */
             let mut signed_key =
                 Hmac::<Sha256>::new_from_slice(self.secret_key.as_bytes()).unwrap();
             signed_key.update(payload.as_bytes());
             let signature = hex::encode(signed_key.finalize().into_bytes());
-            println!("signature: {}", signature);
 
             /* setup request header */
             let mut header = header::HeaderMap::new();
@@ -110,7 +95,6 @@ mod ccgt {
 
             /* setup request content */
             let request = format!("https://max-api.maicoin.com/{}?{}", api_path, params);
-            println!("{}", request);
 
             /* create request sender with the pre-defined header */
             let client = reqwest::blocking::Client::builder()
@@ -122,8 +106,31 @@ mod ccgt {
         }
 
         pub fn sync_accounts_info(&mut self) {
+            let api_path = "/api/v2/members/accounts";
+
+            /* get milliseconds time of UNIX epoch time since 1970 */
+            let timestamp = get_timestamp(SystemTime::now());
+
+            #[derive(Serialize)]
+            struct Payload {
+                nonce: String,
+                path: String,
+            }
+
+            /* prepare payload data */
+            let payload_raw = Payload {
+                nonce: timestamp.to_string(),
+                path: api_path.to_string(),
+            };
+
+            let params = format!("nonce={}", timestamp.to_string());
+
+            /* pack the payload with Base64 format */
+            let payload_json_b64 =
+                b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
+
             /* build client embedded with authorization info */
-            let (client, request) = self.build_auth_client("/api/v2/members/accounts");
+            let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
 
             /* send the request and wait for the respond */
             let vec = client
@@ -142,7 +149,7 @@ mod ccgt {
                     balance: vec[i]["balance"].to_string(),
                     locked: vec[i]["locked"].to_string(),
                     stacked: vec[i]["stacked"].to_string(),
-                    _type: vec[i]["type"].to_string(),
+                    r#type: vec[i]["type"].to_string(),
                     fiat_currency: vec[i]["fiat_currency"].to_string(),
                     fiat_balance: vec[i]["balance"].to_string(),
                 };
@@ -169,5 +176,5 @@ fn main() {
     trade_bot.load_yaml(s);
 
     trade_bot.sync_accounts_info();
-    trade_bot.request_time();
+    trade_bot.read_server_time();
 }
