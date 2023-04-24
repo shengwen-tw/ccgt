@@ -118,11 +118,11 @@ mod ccgt {
                 market: String,
                 state: String,
                 order_by: String,
-                group_id: i32,
+                group_id: Option<u64>,
                 pagination: bool,
-                page: i32,
-                limit: i32,
-                offset: i32,
+                page: u64,
+                limit: u64,
+                offset: u64,
                 path: String,
             }
 
@@ -130,10 +130,10 @@ mod ccgt {
             let payload_raw = Payload {
                 nonce: timestamp.to_string(),
                 market: "dogetwd".to_string(),
-                state: "%5Bwait%5D".to_string(),
-                order_by: "desc".to_string(),
-                group_id: 0,
-                pagination: false,
+                state: "wait".to_string(),
+                order_by: "asc".to_string(),
+                group_id: None,
+                pagination: true,
                 page: 1,
                 limit: 100,
                 offset: 0,
@@ -141,14 +141,14 @@ mod ccgt {
             };
 
             let params = format!(
-                "nonce={},market=\"{}\",state=%5B{}%5D,\
-                 order_by=\"{}\",group_id={},pagination={},\
-                 page={},limit={},offset={}",
+                "nonce={}&market={}&state={}&order_by={}&\
+                 group_id=&pagination={}&page={}&\
+                 limit={}&offset={}",
                 payload_raw.nonce,
                 payload_raw.market,
                 payload_raw.state,
                 payload_raw.order_by,
-                payload_raw.group_id,
+                //payload_raw.group_id,
                 payload_raw.pagination,
                 payload_raw.page,
                 payload_raw.limit,
