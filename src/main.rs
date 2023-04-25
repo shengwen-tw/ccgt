@@ -50,10 +50,10 @@ mod ccgt {
             let docs = YamlLoader::load_from_str(yaml_str).unwrap();
             let doc = &docs[0];
 
-            assert_eq!(doc["symbol"].as_str().unwrap(), "DOGETWD");
+            assert_eq!(doc["symbol"].as_str().unwrap(), "dogetwd");
         }
 
-        pub fn read_server_time(&self) -> i32 {
+        pub fn get_server_time(&self) -> i32 {
             let respond = reqwest::blocking::get("https://max-api.maicoin.com/api/v2/timestamp")
                 .unwrap()
                 .json::<i32>()
@@ -240,6 +240,43 @@ mod ccgt {
                 println!("{:?}", &self.accounts[i]);
             }
         }
+
+        pub fn get_vip_level(&mut self) {
+            let api_path = "/api/v2/members/vip_level";
+
+            /* get milliseconds time of UNIX epoch time since 1970 */
+            let timestamp = get_timestamp(SystemTime::now());
+
+            #[derive(Serialize)]
+            struct Payload {
+                nonce: String,
+                path: String,
+            }
+
+            /* prepare payload data */
+            let payload_raw = Payload {
+                nonce: timestamp.to_string(),
+                path: api_path.to_string(),
+            };
+
+            let params = format!("nonce={}", timestamp.to_string());
+
+            /* pack the payload with Base64 format */
+            let payload_json_b64 =
+                b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
+
+            /* build client embedded with authorization info */
+            let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
+
+            /* send the request and wait for the respond */
+            let response = client
+                .get(request)
+                .send()
+                .unwrap()
+                .json::<serde_json::Value>()
+                .unwrap();
+            println!("{:?}", response);
+        }
     }
 }
 
@@ -247,7 +284,7 @@ fn main() {
     let mut trade_bot = ccgt::GridTradeBot::new();
 
     let s = "
-    symbol:        DOGETWD
+    symbol:        dogetwd
     quantity:      365
     grid_number:   50
     profit_spread: 0.03
@@ -259,5 +296,6 @@ fn main() {
 
     trade_bot.sync_accounts_info();
     trade_bot.get_orders();
-    trade_bot.read_server_time();
+    trade_bot.get_vip_level();
+    trade_bot.get_server_time();
 }
