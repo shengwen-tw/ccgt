@@ -7,6 +7,7 @@ mod ccgt {
     use serde::Serialize;
     use sha2::Sha256;
     use std::env;
+    use std::fmt::Display;
     use std::str;
     use std::time::{SystemTime, UNIX_EPOCH};
     use yaml_rust::YamlLoader;
@@ -106,6 +107,13 @@ mod ccgt {
             (client, request)
         }
 
+        fn option_to_string<T: Display>(&self, option: Option<T>) -> String {
+            match option {
+                None => "".to_string(),
+                Some(v) => v.to_string(),
+            }
+        }
+
         pub fn get_orders(&mut self) {
             let api_path = "/api/v2/orders";
 
@@ -119,40 +127,40 @@ mod ccgt {
                 state: String,
                 order_by: String,
                 group_id: Option<u64>,
-                pagination: bool,
-                page: u64,
-                limit: u64,
-                offset: u64,
+                pagination: Option<bool>,
+                page: Option<u64>,
+                limit: Option<u64>,
+                offset: Option<u64>,
                 path: String,
             }
 
             /* prepare payload data */
             let payload_raw = Payload {
                 nonce: timestamp.to_string(),
-                market: "dogetwd".to_string(),
-                state: "wait".to_string(),
-                order_by: "asc".to_string(),
+                market: "dogetwd".into(),
+                state: "wait".into(),
+                order_by: "asc".into(),
                 group_id: None,
-                pagination: true,
-                page: 1,
-                limit: 100,
-                offset: 0,
-                path: api_path.to_string(),
+                pagination: Some(true),
+                page: Some(1),
+                limit: Some(100),
+                offset: Some(0),
+                path: api_path.into(),
             };
 
             let params = format!(
                 "nonce={}&market={}&state={}&order_by={}&\
-                 group_id=&pagination={}&page={}&\
+                 group_id={}&pagination={}&page={}&\
                  limit={}&offset={}",
                 payload_raw.nonce,
                 payload_raw.market,
                 payload_raw.state,
                 payload_raw.order_by,
-                //payload_raw.group_id,
-                payload_raw.pagination,
-                payload_raw.page,
-                payload_raw.limit,
-                payload_raw.offset
+                self.option_to_string(payload_raw.group_id),
+                self.option_to_string(payload_raw.pagination),
+                self.option_to_string(payload_raw.page),
+                self.option_to_string(payload_raw.limit),
+                self.option_to_string(payload_raw.offset)
             );
             println!("params: {}", params);
 
@@ -169,9 +177,14 @@ mod ccgt {
                 .get(request)
                 .send()
                 .unwrap()
-                .json::<serde_json::Value>()
+                .json::<Vec<serde_json::Value>>()
                 .unwrap();
             println!("result: {:?}", vec);
+
+            /* read orders */
+            for i in 0..vec.len() {
+                println!("{:?}", &vec[i]);
+            }
         }
 
         pub fn sync_accounts_info(&mut self) {
