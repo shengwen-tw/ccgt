@@ -3,6 +3,7 @@ mod ccgt {
 
     use base64::encode as b64_encode;
     use hmac::{Hmac, Mac, NewMac};
+    use log::{error, info, warn, LevelFilter};
     use reqwest::header;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -10,6 +11,7 @@ mod ccgt {
     use sha2::Sha256;
     use std::env;
     use std::fmt::Display;
+    use std::io::Write;
     use std::str;
     use std::time::{SystemTime, UNIX_EPOCH};
     use yaml_rust::YamlLoader;
@@ -39,6 +41,20 @@ mod ccgt {
 
     impl GridTradeBot {
         pub fn new() -> GridTradeBot {
+            std::env::set_var("RUST_LOG", "info");
+            env_logger::Builder::new()
+                .format(|buf, record| {
+                    writeln!(
+                        buf,
+                        "[{} {}] {}",
+                        chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                        record.level(),
+                        record.args()
+                    )
+                })
+                .filter(None, LevelFilter::Info)
+                .init();
+
             dotenv::dotenv().ok();
 
             GridTradeBot {
@@ -98,7 +114,7 @@ mod ccgt {
 
             /* setup request content */
             let request = format!("https://max-api.maicoin.com/{}?{}", api_path, params);
-            println!("{}", request);
+            //println!("{}", request);
 
             /* create request sender with the pre-defined header */
             let client = reqwest::blocking::Client::builder()
@@ -116,7 +132,7 @@ mod ccgt {
             }
         }
 
-        pub fn generate_new_order(&mut self) {
+        pub fn submit_order(&mut self) {
             let api_path = "/api/v2/orders";
 
             /* get milliseconds time of UNIX epoch time since 1970 */
@@ -164,12 +180,12 @@ mod ccgt {
                 payload_raw.ord_type,
                 self.option_to_string(payload_raw.group_id),
             );
-            println!("params: {}", params);
+            //println!("params: {}", params);
 
             /* pack the payload with Base64 format */
             let payload_json_b64 =
                 b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
-            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+            //println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
 
             /* build client embedded with authorization info */
             let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
@@ -181,7 +197,14 @@ mod ccgt {
                 .unwrap()
                 .json::<serde_json::Value>()
                 .unwrap();
-            println!("result: {:?}", respond);
+            //println!("result: {:?}", respond);
+
+            if respond["error"] != serde_json::Value::Null {
+                error!(
+                    "Failed to submit the order: {}",
+                    respond["error"]["message"]
+                );
+            }
         }
 
         pub fn delete_order(&mut self) {
@@ -212,12 +235,12 @@ mod ccgt {
                 self.option_to_string(payload_raw.id),
                 payload_raw.client_oid,
             );
-            println!("params: {}", params);
+            //println!("params: {}", params);
 
             /* pack the payload with Base64 format */
             let payload_json_b64 =
                 b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
-            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+            //println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
 
             /* build client embedded with authorization info */
             let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
@@ -229,7 +252,14 @@ mod ccgt {
                 .unwrap()
                 .json::<serde_json::Value>()
                 .unwrap();
-            println!("result: {:?}", respond);
+            //println!("result: {:?}", respond);
+
+            if respond["error"] != serde_json::Value::Null {
+                error!(
+                    "Failed to delete the order: {}",
+                    respond["error"]["message"]
+                );
+            }
         }
 
         pub fn get_orders(&mut self) {
@@ -297,7 +327,7 @@ mod ccgt {
                 .unwrap()
                 .json::<Vec<serde_json::Value>>()
                 .unwrap();
-            println!("result: {:?}", vec);
+            //println!("result: {:?}", vec);
 
             /* read orders */
             for i in 0..vec.len() {
@@ -305,7 +335,7 @@ mod ccgt {
             }
         }
 
-        pub fn sync_accounts_info(&mut self) {
+        pub fn sync_accounts(&mut self) {
             let api_path = "/api/v2/members/accounts";
 
             /* get milliseconds time of UNIX epoch time since 1970 */
@@ -412,10 +442,10 @@ fn main() {
     ";
     trade_bot.load_yaml(s);
 
-    trade_bot.sync_accounts_info();
+    trade_bot.sync_accounts();
     trade_bot.get_orders();
     trade_bot.get_vip_level();
     trade_bot.get_server_time();
-    trade_bot.generate_new_order();
+    trade_bot.submit_order();
     trade_bot.delete_order();
 }
