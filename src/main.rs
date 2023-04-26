@@ -142,7 +142,7 @@ mod ccgt {
                 market: "dogetwd".into(),
                 side: "buy".into(),
                 volume: Some(dec!(100000.0)),
-                price: Some(dec!(0.001)),
+                price: Some(dec!(1)),
                 client_oid: "max_rs_api_case_create_order".into(),
                 stop_price: None,
                 ord_type: "limit".into(),
@@ -152,7 +152,7 @@ mod ccgt {
 
             let params = format!(
                 "nonce={}&market={}&side={}&volume={}&\
-                 price={}&client_oid={}&stop_proce={}&\
+                 price={}&client_oid={}&stop_price={}&\
                  ord_type={}&group_id={}",
                 payload_raw.nonce,
                 payload_raw.market,
