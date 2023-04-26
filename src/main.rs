@@ -4,6 +4,8 @@ mod ccgt {
     use base64::encode as b64_encode;
     use hmac::{Hmac, Mac, NewMac};
     use reqwest::header;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
     use serde::Serialize;
     use sha2::Sha256;
     use std::env;
@@ -112,6 +114,74 @@ mod ccgt {
                 None => "".to_string(),
                 Some(v) => v.to_string(),
             }
+        }
+
+        pub fn generate_new_order(&mut self) {
+            let api_path = "/api/v2/orders";
+
+            /* get milliseconds time of UNIX epoch time since 1970 */
+            let timestamp = get_timestamp(SystemTime::now());
+
+            #[derive(Serialize)]
+            struct Payload {
+                nonce: String,
+                market: String,
+                side: String,
+                volume: Option<Decimal>,
+                price: Option<Decimal>,
+                client_oid: String,
+                stop_price: Option<Decimal>,
+                ord_type: String,
+                group_id: Option<u64>,
+                path: String,
+            }
+
+            /* prepare payload data */
+            let payload_raw = Payload {
+                nonce: timestamp.to_string(),
+                market: "dogetwd".into(),
+                side: "buy".into(),
+                volume: Some(dec!(100000.0)),
+                price: Some(dec!(0.001)),
+                client_oid: "max_rs_api_case_create_order".into(),
+                stop_price: None,
+                ord_type: "limit".into(),
+                group_id: None,
+                path: api_path.into(),
+            };
+
+            let params = format!(
+                "nonce={}&market={}&side={}&volume={}&\
+                 price={}&client_oid={}&stop_proce={}&\
+                 ord_type={}&group_id={}",
+                payload_raw.nonce,
+                payload_raw.market,
+                payload_raw.side,
+                self.option_to_string(payload_raw.volume),
+                self.option_to_string(payload_raw.price),
+                payload_raw.client_oid,
+                self.option_to_string(payload_raw.stop_price),
+                payload_raw.ord_type,
+                self.option_to_string(payload_raw.group_id),
+            );
+            println!("params: {}", params);
+
+            /* pack the payload with Base64 format */
+            let payload_json_b64 =
+                b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
+            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+
+            /* build client embedded with authorization info */
+            let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
+
+            /* send the request and wait for the respond */
+            let respond = client
+                .post(request)
+                .send()
+                .unwrap()
+                .json::<serde_json::Value>()
+                .unwrap();
+            println!("result: {:?}", respond);
         }
 
         pub fn get_orders(&mut self) {
@@ -298,4 +368,5 @@ fn main() {
     trade_bot.get_orders();
     trade_bot.get_vip_level();
     trade_bot.get_server_time();
+    trade_bot.generate_new_order();
 }
