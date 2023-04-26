@@ -184,6 +184,54 @@ mod ccgt {
             println!("result: {:?}", respond);
         }
 
+        pub fn delete_order(&mut self) {
+            let api_path = "/api/v2/order/delete";
+
+            /* get milliseconds time of UNIX epoch time since 1970 */
+            let timestamp = get_timestamp(SystemTime::now());
+
+            #[derive(Serialize)]
+            struct Payload {
+                nonce: String,
+                id: Option<u64>,
+                client_oid: String,
+                path: String,
+            }
+
+            /* prepare payload data */
+            let payload_raw = Payload {
+                nonce: timestamp.to_string(),
+                id: Some(543210),
+                client_oid: "max_rs_api_case_create_order".into(),
+                path: api_path.into(),
+            };
+
+            let params = format!(
+                "nonce={}&id={}&client_oid={}",
+                payload_raw.nonce,
+                self.option_to_string(payload_raw.id),
+                payload_raw.client_oid,
+            );
+            println!("params: {}", params);
+
+            /* pack the payload with Base64 format */
+            let payload_json_b64 =
+                b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
+            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+
+            /* build client embedded with authorization info */
+            let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
+
+            /* send the request and wait for the respond */
+            let respond = client
+                .post(request)
+                .send()
+                .unwrap()
+                .json::<serde_json::Value>()
+                .unwrap();
+            println!("result: {:?}", respond);
+        }
+
         pub fn get_orders(&mut self) {
             let api_path = "/api/v2/orders";
 
@@ -369,4 +417,5 @@ fn main() {
     trade_bot.get_vip_level();
     trade_bot.get_server_time();
     trade_bot.generate_new_order();
+    trade_bot.delete_order();
 }
