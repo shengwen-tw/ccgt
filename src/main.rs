@@ -53,6 +53,7 @@ mod ccgt {
                     )
                 })
                 .filter(None, LevelFilter::Info)
+                .target(env_logger::Target::Stdout)
                 .init();
 
             dotenv::dotenv().ok();
