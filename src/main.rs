@@ -311,12 +311,12 @@ mod ccgt {
                 self.option_to_string(payload_raw.limit),
                 self.option_to_string(payload_raw.offset)
             );
-            println!("params: {}", params);
+            //println!("params: {}", params);
 
             /* pack the payload with Base64 format */
             let payload_json_b64 =
                 b64_encode(serde_json::to_string(&payload_raw).unwrap().as_bytes());
-            println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
+            //println!("json: {}", serde_json::to_string(&payload_raw).unwrap());
 
             /* build client embedded with authorization info */
             let (client, request) = self.build_auth_client(&api_path, &params, &payload_json_b64);
@@ -332,7 +332,10 @@ mod ccgt {
 
             /* read orders */
             for i in 0..vec.len() {
-                println!("{:?}", &vec[i]);
+                println!(
+                    "[{}] price:{}, remaining_volume:{}",
+                    &vec[i]["market"], &vec[i]["price"], &vec[i]["remaining_volume"]
+                );
             }
         }
 
@@ -386,7 +389,10 @@ mod ccgt {
                 };
                 self.accounts.push(account);
 
-                println!("{:?}", &self.accounts[i]);
+                println!(
+                    "[{}] balance:{}, locked:{}",
+                    &self.accounts[i].currency, &self.accounts[i].balance, &self.accounts[i].locked
+                );
             }
         }
 
@@ -424,7 +430,11 @@ mod ccgt {
                 .unwrap()
                 .json::<serde_json::Value>()
                 .unwrap();
-            println!("{:?}", response);
+            println!(
+                "maker_fee:{}, taker_fee:{}",
+                response["current_vip_level"]["maker_fee"],
+                response["current_vip_level"]["taker_fee"]
+            );
         }
     }
 }
