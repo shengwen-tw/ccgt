@@ -11,6 +11,7 @@ mod ccgt {
     use sha2::Sha256;
     use std::env;
     use std::fmt::Display;
+    use std::io::Read;
     use std::io::Write;
     use std::str;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -65,11 +66,24 @@ mod ccgt {
             }
         }
 
-        pub fn load_yaml(&self, yaml_str: &str) {
-            let docs = YamlLoader::load_from_str(yaml_str).unwrap();
+        pub fn load_yaml(&self) {
+            let mut file = match std::fs::File::open("config.yaml") {
+                Ok(file) => file,
+                Err(_error) => {
+                    error!("config.yaml is not found");
+                    std::process::exit(1);
+                }
+            };
+
+            let mut yaml_str = String::new();
+
+            file.read_to_string(&mut yaml_str)
+                .expect("Unable to read file");
+
+            let docs = YamlLoader::load_from_str(&yaml_str).unwrap();
             let doc = &docs[0];
 
-            assert_eq!(doc["symbol"].as_str().unwrap(), "dogetwd");
+            assert_eq!(doc["strategies"][0]["symbol"].as_str().unwrap(), "dogetwd");
         }
 
         pub fn get_server_time(&self) -> i32 {
@@ -442,16 +456,7 @@ mod ccgt {
 fn main() {
     let mut trade_bot = ccgt::GridTradeBot::new();
 
-    let s = "
-    symbol:        dogetwd
-    quantity:      365
-    grid_number:   50
-    profit_spread: 0.03
-    upper_price:   3.0
-    lower_price:   2.1
-    long:          true
-    ";
-    trade_bot.load_yaml(s);
+    trade_bot.load_yaml();
 
     trade_bot.sync_accounts();
     trade_bot.get_orders();
