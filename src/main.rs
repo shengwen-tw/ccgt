@@ -126,7 +126,7 @@ mod ccgt {
             (client, request)
         }
 
-        fn option_to_string<T: Display>(&self, option: Option<T>) -> String {
+        fn option_to_string<T: Display>(&self, option: &Option<T>) -> String {
             match option {
                 None => "".to_string(),
                 Some(v) => v.to_string(),
@@ -144,9 +144,9 @@ mod ccgt {
                 nonce: String,
                 market: String,
                 side: String,
-                volume: Option<Decimal>,
-                price: Option<Decimal>,
-                client_oid: String,
+                volume: Decimal,
+                price: Decimal,
+                client_oid: Option<String>,
                 stop_price: Option<Decimal>,
                 ord_type: String,
                 group_id: Option<u64>,
@@ -158,9 +158,9 @@ mod ccgt {
                 nonce: timestamp.to_string(),
                 market: "dogetwd".into(),
                 side: "buy".into(),
-                volume: Some(dec!(100000.0)),
-                price: Some(dec!(1)),
-                client_oid: "max_rs_api_case_create_order".into(),
+                volume: dec!(100000.0),
+                price: dec!(1),
+                client_oid: Some("max_rs_api_case_create_order".into()),
                 stop_price: None,
                 ord_type: "limit".into(),
                 group_id: None,
@@ -174,12 +174,12 @@ mod ccgt {
                 payload_raw.nonce,
                 payload_raw.market,
                 payload_raw.side,
-                self.option_to_string(payload_raw.volume),
-                self.option_to_string(payload_raw.price),
-                payload_raw.client_oid,
-                self.option_to_string(payload_raw.stop_price),
+                payload_raw.volume.to_string(),
+                payload_raw.price.to_string(),
+                self.option_to_string(&payload_raw.client_oid),
+                self.option_to_string(&payload_raw.stop_price),
                 payload_raw.ord_type,
-                self.option_to_string(payload_raw.group_id),
+                self.option_to_string(&payload_raw.group_id),
             );
             //println!("params: {}", params);
 
@@ -218,7 +218,7 @@ mod ccgt {
             struct Payload {
                 nonce: String,
                 id: Option<u64>,
-                client_oid: String,
+                client_oid: Option<String>,
                 path: String,
             }
 
@@ -226,15 +226,15 @@ mod ccgt {
             let payload_raw = Payload {
                 nonce: timestamp.to_string(),
                 id: Some(543210),
-                client_oid: "max_rs_api_case_create_order".into(),
+                client_oid: Some("max_rs_api_case_create_order".into()),
                 path: api_path.into(),
             };
 
             let params = format!(
                 "nonce={}&id={}&client_oid={}",
                 payload_raw.nonce,
-                self.option_to_string(payload_raw.id),
-                payload_raw.client_oid,
+                self.option_to_string(&payload_raw.id),
+                self.option_to_string(&payload_raw.client_oid),
             );
             //println!("params: {}", params);
 
@@ -274,7 +274,7 @@ mod ccgt {
                 nonce: String,
                 market: String,
                 state: String,
-                order_by: String,
+                order_by: Option<String>,
                 group_id: Option<u64>,
                 pagination: Option<bool>,
                 page: Option<u64>,
@@ -288,7 +288,7 @@ mod ccgt {
                 nonce: timestamp.to_string(),
                 market: "dogetwd".into(),
                 state: "wait".into(),
-                order_by: "asc".into(),
+                order_by: Some("asc".into()),
                 group_id: None,
                 pagination: Some(true),
                 page: Some(1),
@@ -304,12 +304,12 @@ mod ccgt {
                 payload_raw.nonce,
                 payload_raw.market,
                 payload_raw.state,
-                payload_raw.order_by,
-                self.option_to_string(payload_raw.group_id),
-                self.option_to_string(payload_raw.pagination),
-                self.option_to_string(payload_raw.page),
-                self.option_to_string(payload_raw.limit),
-                self.option_to_string(payload_raw.offset)
+                self.option_to_string(&payload_raw.order_by),
+                self.option_to_string(&payload_raw.group_id),
+                self.option_to_string(&payload_raw.pagination),
+                self.option_to_string(&payload_raw.page),
+                self.option_to_string(&payload_raw.limit),
+                self.option_to_string(&payload_raw.offset)
             );
             //println!("params: {}", params);
 
