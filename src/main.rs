@@ -84,6 +84,10 @@ mod ccgt {
             let doc = &docs[0];
 
             assert_eq!(doc["strategies"][0]["symbol"].as_str().unwrap(), "dogetwd");
+
+            for risk_ctrl in doc["risk_control"].as_vec().unwrap() {}
+
+            for strategy in doc["strategies"].as_vec().unwrap() {}
         }
 
         pub fn get_server_time(&self) -> i32 {
