@@ -457,15 +457,39 @@ mod ccgt {
     }
 }
 
-fn main() {
+use signal_hook::consts::TERM_SIGNALS;
+use signal_hook::flag;
+use std::io::Error;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time;
+
+fn main() -> Result<(), Error> {
     let mut trade_bot = ccgt::GridTradeBot::new();
 
     trade_bot.load_yaml();
-
     trade_bot.sync_accounts();
     trade_bot.get_orders();
     trade_bot.get_vip_level();
     trade_bot.get_server_time();
     trade_bot.submit_order();
     trade_bot.delete_order();
+
+    /* configure signal catching */
+    let term = Arc::new(AtomicBool::new(false));
+    for sig in TERM_SIGNALS {
+        flag::register_conditional_shutdown(*sig, 1, Arc::clone(&term))?;
+        flag::register(*sig, Arc::clone(&term))?;
+    }
+
+    /* run trading strategy until stop signal is catched */
+    while !term.load(Ordering::Relaxed) {
+        println!("simulate trading...");
+        thread::sleep(time::Duration::from_secs(1));
+    }
+
+    println!("trading is terminated");
+
+    Ok(())
 }
