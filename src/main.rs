@@ -408,7 +408,7 @@ mod ccgt {
             self.accounts.clear();
             for i in 0..vec.len() {
                 let account = Account {
-                    currency: vec[i]["currency"].to_string(),
+                    currency: vec[i]["currency"].to_string().replace("\"", ""),
                     balance: vec[i]["balance"].to_string(),
                     locked: vec[i]["locked"].to_string(),
                     stacked: vec[i]["stacked"].to_string(),
@@ -465,6 +465,48 @@ mod ccgt {
                 response["current_vip_level"]["taker_fee"]
             );
         }
+
+        pub fn run(&mut self) {
+            let trade_pair = "dogetwd";
+            let mut base_currency = "".into();
+            let mut quote_currency = "".into();
+
+            let mut cnt: u32 = 0;
+            let mut first_currency = "".into();
+            let mut second_currency = "".into();
+
+            for i in 0..self.accounts.len() {
+                let currency = &self.accounts[i].currency;
+
+                if trade_pair.contains(currency) {
+                    if cnt == 0 {
+                        first_currency = currency.clone();
+                    } else if cnt == 1 {
+                        second_currency = currency.clone();
+                    }
+
+                    cnt = cnt + 1;
+                }
+            }
+
+            let test_pair1 = format!("{}{}", first_currency, second_currency);
+            let test_pair2 = format!("{}{}", second_currency, first_currency);
+
+            if trade_pair == test_pair1 {
+                base_currency = first_currency;
+                quote_currency = second_currency;
+            } else if trade_pair == test_pair2 {
+                base_currency = second_currency;
+                quote_currency = first_currency;
+            } else {
+                error!("unknown currency pair!");
+            }
+
+            info!(
+                "simulate trading, base={}, quote={}",
+                base_currency, quote_currency
+            );
+        }
     }
 }
 
@@ -497,7 +539,7 @@ fn main() -> Result<(), Error> {
 
     /* run trading strategy until stop signal is catched */
     while !term.load(Ordering::Relaxed) {
-        println!("simulate trading...");
+        trade_bot.run();
         thread::sleep(time::Duration::from_secs(1));
     }
 
