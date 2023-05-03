@@ -100,6 +100,17 @@ mod ccgt {
             respond
         }
 
+        pub fn get_ticker_info(&self, market: &str) {
+            let respond = reqwest::blocking::get(format!(
+                "https://max-api.maicoin.com/api/v2/tickers/{}",
+                market
+            ))
+            .unwrap()
+            .json::<serde_json::Value>()
+            .unwrap();
+            println!("ticker: {:#?}", respond);
+        }
+
         pub fn build_auth_client(
             &mut self,
             api_path: &str,
@@ -473,6 +484,7 @@ fn main() -> Result<(), Error> {
     trade_bot.get_orders();
     trade_bot.get_vip_level();
     trade_bot.get_server_time();
+    trade_bot.get_ticker_info("dogetwd");
     trade_bot.submit_order();
     trade_bot.delete_order();
 
