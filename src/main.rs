@@ -5,6 +5,7 @@ mod ccgt {
     use hmac::{Hmac, Mac, NewMac};
     use log::{error, info, warn, LevelFilter};
     use reqwest::header;
+    use rust_decimal::prelude::*;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use serde::Serialize;
@@ -16,6 +17,29 @@ mod ccgt {
     use std::str;
     use std::time::{SystemTime, UNIX_EPOCH};
     use yaml_rust::YamlLoader;
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RiskControl {
+        symbol: String,
+        min_quote_balance: Decimal,
+        max_base_asset_balance: Decimal,
+        min_base_asset_balance: Decimal,
+        max_order_amount: Decimal,
+    }
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct TradeStrategy {
+        enabled: bool,
+        symbol: String,
+        quantity: Decimal,
+        grid_number: Decimal,
+        profit_spread: Decimal,
+        upper_price: Decimal,
+        lower_price: Decimal,
+        long: bool,
+    }
 
     #[derive(Debug)]
     #[allow(dead_code)]
@@ -32,6 +56,8 @@ mod ccgt {
     pub struct GridTradeBot {
         access_key: String,
         secret_key: String,
+        risk_control: Vec<RiskControl>,
+        trade_strategies: Vec<TradeStrategy>,
         accounts: Vec<Account>,
     }
 
@@ -62,11 +88,13 @@ mod ccgt {
             GridTradeBot {
                 access_key: env::var("MAX_API_KEY").unwrap(),
                 secret_key: env::var("MAX_API_SECRET").unwrap(),
+                risk_control: Vec::new(),
+                trade_strategies: Vec::new(),
                 accounts: Vec::new(),
             }
         }
 
-        pub fn load_yaml(&self) {
+        pub fn load_yaml(&mut self) {
             let mut file = match std::fs::File::open("config.yaml") {
                 Ok(file) => file,
                 Err(_error) => {
@@ -85,9 +113,49 @@ mod ccgt {
 
             assert_eq!(doc["strategies"][0]["symbol"].as_str().unwrap(), "dogetwd");
 
-            for risk_ctrl in doc["risk_control"].as_vec().unwrap() {}
+            for risk_ctrl in doc["risk_control"].as_vec().unwrap() {
+                let symbol = risk_ctrl["symbol"].as_str().unwrap().into();
+                let min_quote_balance = risk_ctrl["min_quote_balance"].as_f64().unwrap();
+                let max_base_asset_balance = risk_ctrl["max_base_asset_balance"].as_f64().unwrap();
+                let min_base_asset_balance = risk_ctrl["min_base_asset_balance"].as_f64().unwrap();
+                let max_order_amount = risk_ctrl["max_order_amount"].as_f64().unwrap();
 
-            for strategy in doc["strategies"].as_vec().unwrap() {}
+                let new_risk_ctrl = RiskControl {
+                    symbol: symbol,
+                    min_quote_balance: Decimal::from_f64(min_quote_balance).unwrap(),
+                    max_base_asset_balance: Decimal::from_f64(max_base_asset_balance).unwrap(),
+                    min_base_asset_balance: Decimal::from_f64(min_base_asset_balance).unwrap(),
+                    max_order_amount: Decimal::from_f64(max_order_amount).unwrap(),
+                };
+                //println!("{:?}", new_risk_ctrl);
+
+                self.risk_control.push(new_risk_ctrl);
+            }
+
+            for strategy in doc["strategies"].as_vec().unwrap() {
+                let enabled = strategy["enabled"].as_bool().unwrap();
+                let symbol = strategy["symbol"].as_str().unwrap().into();
+                let quantity = strategy["quantity"].as_f64().unwrap();
+                let grid_number = strategy["grid_number"].as_f64().unwrap();
+                let profit_spread = strategy["profit_spread"].as_f64().unwrap();
+                let upper_price = strategy["upper_price"].as_f64().unwrap();
+                let lower_price = strategy["lower_price"].as_f64().unwrap();
+                let long = strategy["long"].as_bool().unwrap();
+
+                let new_strategy = TradeStrategy {
+                    enabled: enabled,
+                    symbol: symbol,
+                    quantity: Decimal::from_f64(quantity).unwrap(),
+                    grid_number: Decimal::from_f64(grid_number).unwrap(),
+                    profit_spread: Decimal::from_f64(profit_spread).unwrap(),
+                    upper_price: Decimal::from_f64(upper_price).unwrap(),
+                    lower_price: Decimal::from_f64(lower_price).unwrap(),
+                    long: long,
+                };
+                //println!("{:?}", new_strategy);
+
+                self.trade_strategies.push(new_strategy);
+            }
         }
 
         pub fn get_server_time(&self) -> i32 {
